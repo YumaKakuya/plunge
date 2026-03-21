@@ -65,11 +65,11 @@ export default function ClipperView() {
   }
 
   return (
-    <div className="p-4 space-y-5">
+    <div className="p-4 space-y-4">
       {/* Clip form */}
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="flex gap-3">
-          <div className="grid grid-cols-2 gap-3 flex-1">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="flex gap-4">
+          <div className="grid grid-cols-2 gap-4 flex-1">
             <Input
               type="url"
               placeholder="URL (optional)"
@@ -114,7 +114,7 @@ export default function ClipperView() {
         <Button
           type="submit"
           disabled={!content.trim() || submitting}
-          className="cursor-pointer"
+          className="w-full h-10 cursor-pointer"
         >
           {submitting ? 'Saving...' : 'Clip'}
         </Button>
@@ -125,16 +125,19 @@ export default function ClipperView() {
 
       {/* Clips list */}
       <div className="space-y-2">
-        <h3 className="text-xs font-medium text-text/40 uppercase tracking-wider">
+        <h3 className="text-[13px] font-medium text-text-muted uppercase tracking-wider">
           Saved Clips {clips.length > 0 && `(${clips.length})`}
         </h3>
 
         {isLoading && (
-          <p className="text-sm text-text/40 py-4 text-center">Loading...</p>
+          <p className="text-sm text-text-muted py-4 text-center">Loading...</p>
         )}
 
         {!isLoading && clips.length === 0 && (
-          <p className="text-sm text-text/30 py-6 text-center">No clips yet. Clip something above.</p>
+          <div className="flex flex-col items-center py-8 gap-1">
+            <h4 className="text-[15px] font-medium text-text">No clips yet</h4>
+            <p className="text-sm text-text-secondary">Clip something above to get started</p>
+          </div>
         )}
 
         <div className="space-y-2">
@@ -151,15 +154,15 @@ export default function ClipperView() {
                     <h4 className="text-sm font-medium text-text truncate">
                       {clip.title || clip.url || 'Untitled'}
                     </h4>
-                    <span className="text-[10px] text-text/30 whitespace-nowrap shrink-0">
+                    <span className="text-[10px] text-text-muted whitespace-nowrap shrink-0">
                       {new Date(clip.clipped_at).toLocaleDateString()}
                     </span>
                   </div>
-                  <p className="text-xs text-text/60 mt-1 line-clamp-2">
+                  <p className="text-xs text-text-secondary mt-1 line-clamp-2">
                     {clip.content}
                   </p>
                   {clip.memo && (
-                    <p className="text-[11px] text-gold/70 mt-1.5 italic">
+                    <p className="text-[11px] text-text-secondary/70 mt-1.5 italic">
                       {clip.memo}
                     </p>
                   )}

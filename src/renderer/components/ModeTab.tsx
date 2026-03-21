@@ -11,11 +11,11 @@ export default function ModeTab({ label, active, onClick }: ModeTabProps) {
     <button
       onClick={onClick}
       className={cn(
-        'px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer',
+        'px-3 py-1.5 text-sm font-medium transition-colors duration-100 cursor-pointer',
         'border-b-2 bg-transparent',
         active
-          ? 'border-gold text-gold'
-          : 'border-transparent text-text/60 hover:text-text hover:bg-surface-hover'
+          ? 'border-gold text-text'
+          : 'border-transparent text-text-muted hover:text-text hover:bg-surface-hover'
       )}
       style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
     >

@@ -8,9 +8,9 @@ const ToyBox = lazy(() => import('@/renderer/components/ToyBox'))
 const ClockPanel = lazy(() => import('@/renderer/components/ClockPanel'))
 
 const MODES = [
-  { key: 'launch' as const, label: '\u{1F680} Launch' },
-  { key: 'toys' as const, label: '\u{1F9F0} Toys' },
-  { key: 'clock' as const, label: '\u{1F550} Clock' },
+  { key: 'launch' as const, label: 'Home' },
+  { key: 'toys' as const, label: 'Toys' },
+  { key: 'clock' as const, label: 'Clock' },
 ]
 
 export default function App() {
@@ -52,8 +52,15 @@ export default function App() {
       {/* Title bar / drag region */}
       <div
         className="flex items-center gap-1 px-3 border-b border-divider bg-surface shrink-0"
-        style={{ WebkitAppRegion: 'drag', height: 36 } as React.CSSProperties}
+        style={{ WebkitAppRegion: 'drag', height: 44 } as React.CSSProperties}
       >
+        <button
+          onClick={() => setMode('launch')}
+          className="text-[15px] font-semibold text-text mr-3 cursor-pointer bg-transparent border-none hover:text-gold transition-colors duration-100"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
+          Plunge.
+        </button>
         {MODES.map((m) => (
           <ModeTab
             key={m.key}
@@ -69,10 +76,10 @@ export default function App() {
         <AnimatePresence mode="wait">
           <motion.div
             key={mode}
-            initial={{ opacity: 0, y: 6 }}
+            initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.18 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
             className="absolute inset-0"
           >
             <Suspense

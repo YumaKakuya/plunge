@@ -101,12 +101,12 @@ export default function ClockPanel() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.25 }}
+      transition={{ duration: 0.15 }}
       className="p-4 space-y-6"
     >
       {/* World Clock */}
       <div>
-        <h3 className="text-xs font-medium text-text/40 uppercase tracking-wider mb-3">
+        <h3 className="text-[13px] font-medium text-text-muted uppercase tracking-wider mb-3">
           World Clock
         </h3>
         <div className="grid grid-cols-2 gap-2">
@@ -115,10 +115,10 @@ export default function ClockPanel() {
               <CardContent className="p-3 flex items-baseline justify-between">
                 <div>
                   <span className="text-sm font-medium text-text">{entry.city}</span>
-                  <span className="text-[10px] text-text/30 ml-1.5">{formatTzAbbr(now, entry.tz)}</span>
-                  <p className="text-[11px] text-text/40 mt-0.5">{formatDate(now, entry.tz)}</p>
+                  <span className="text-xs text-text-muted ml-1.5">{formatTzAbbr(now, entry.tz)}</span>
+                  <p className="text-xs text-text-muted mt-0.5">{formatDate(now, entry.tz)}</p>
                 </div>
-                <span className="text-lg font-mono text-text tabular-nums">
+                <span className="text-xl font-mono text-text tabular-nums">
                   {formatTime(now, entry.tz)}
                 </span>
               </CardContent>
@@ -130,7 +130,7 @@ export default function ClockPanel() {
       {/* Calendar */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-medium text-text/40 uppercase tracking-wider">
+          <h3 className="text-[13px] font-medium text-text-muted uppercase tracking-wider">
             Calendar
           </h3>
           <div className="flex items-center gap-2">
@@ -138,7 +138,7 @@ export default function ClockPanel() {
               onClick={prevMonth}
               variant="ghost"
               size="icon"
-              className="w-6 h-6 text-text/40 hover:text-text cursor-pointer text-xs"
+              className="w-8 h-8 text-text-muted hover:text-text cursor-pointer text-xs"
             >
               &lt;
             </Button>
@@ -149,7 +149,7 @@ export default function ClockPanel() {
               onClick={nextMonth}
               variant="ghost"
               size="icon"
-              className="w-6 h-6 text-text/40 hover:text-text cursor-pointer text-xs"
+              className="w-8 h-8 text-text-muted hover:text-text cursor-pointer text-xs"
             >
               &gt;
             </Button>
@@ -157,11 +157,11 @@ export default function ClockPanel() {
         </div>
 
         <Card className="bg-surface border-divider">
-          <CardContent className="p-3">
+          <CardContent className="p-4">
             {/* Weekday headers */}
             <div className="grid grid-cols-7 mb-1">
               {WEEKDAYS.map((d) => (
-                <div key={d} className="text-center text-[10px] font-medium text-text/30 py-1">
+                <div key={d} className="text-center text-[11px] font-medium text-text-muted py-1">
                   {d}
                 </div>
               ))}
@@ -181,10 +181,10 @@ export default function ClockPanel() {
                   <div
                     key={day}
                     className={cn(
-                      'py-1.5 text-center text-xs transition-colors rounded',
+                      'py-1.5 text-center text-xs transition-colors duration-100 rounded',
                       isToday
                         ? 'bg-gold text-white font-bold'
-                        : 'text-text/70'
+                        : 'text-text-secondary'
                     )}
                   >
                     {day}

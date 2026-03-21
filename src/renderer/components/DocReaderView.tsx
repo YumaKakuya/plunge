@@ -120,12 +120,12 @@ export default function DocReaderView() {
         value={markdown}
         onChange={(e) => setMarkdown(e.target.value)}
         rows={6}
-        className="font-mono"
+        className="font-mono bg-surface"
       />
 
       {/* AI Normalize */}
       {aiStatus?.configured && (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button
             onClick={handleNormalize}
             disabled={!markdown.trim() || aiLoading}
@@ -142,8 +142,8 @@ export default function DocReaderView() {
       )}
 
       {/* Speech controls */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex gap-1.5">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex gap-2">
           <Button
             onClick={handlePlay}
             disabled={!plainText}
@@ -177,7 +177,7 @@ export default function DocReaderView() {
 
         {/* Speed slider */}
         <div className="flex items-center gap-2">
-          <label className="text-[11px] text-text/40">Speed</label>
+          <label className="text-[11px] text-text-muted">Speed</label>
           <input
             type="range"
             min={0.5}
@@ -187,7 +187,7 @@ export default function DocReaderView() {
             onChange={(e) => setSpeed(Number(e.target.value))}
             className="w-20 accent-gold"
           />
-          <span className="text-[11px] text-text/50 w-8">{speed.toFixed(1)}x</span>
+          <span className="text-[11px] text-text-secondary w-8">{speed.toFixed(1)}x</span>
         </div>
       </div>
 
@@ -198,10 +198,10 @@ export default function DocReaderView() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.15 }}
           >
             <Card className="bg-surface border-divider">
-              <CardContent className="p-4 text-sm text-text leading-relaxed select-text">
+              <CardContent className="p-6 text-sm text-text leading-relaxed select-text">
                 <div dangerouslySetInnerHTML={{ __html: mdToHtml(markdown) }} />
               </CardContent>
             </Card>

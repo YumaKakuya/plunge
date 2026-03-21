@@ -92,10 +92,10 @@ export default function HighlighterView() {
     COLORS.find((col) => col.key === c) ?? COLORS[0]
 
   return (
-    <div className="p-4 space-y-5">
+    <div className="p-4 space-y-4">
       {/* Add form */}
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <Select
             value={clipId}
             onChange={(e) => setClipId(e.target.value ? Number(e.target.value) : '')}
@@ -109,16 +109,16 @@ export default function HighlighterView() {
           </Select>
 
           {/* Color picker */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-surface border border-divider rounded-lg">
+          <div className="flex items-center gap-3 px-3 py-2 bg-surface border border-divider rounded-lg">
             {COLORS.map((c) => (
               <button
                 key={c.key}
                 type="button"
                 onClick={() => setColor(c.key)}
                 className={cn(
-                  'w-6 h-6 rounded-full transition-all cursor-pointer',
+                  'w-7 h-7 rounded-full transition-all duration-100 cursor-pointer',
                   c.dot,
-                  color === c.key ? 'ring-2 ring-offset-1 ' + c.ring + ' scale-110' : 'opacity-60 hover:opacity-100'
+                  color === c.key ? 'ring-2 ring-offset-2 ' + c.ring + ' scale-110' : 'opacity-60 hover:opacity-100'
                 )}
                 title={c.label}
               />
@@ -165,14 +165,14 @@ export default function HighlighterView() {
         )}
 
         {suggestedTags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {suggestedTags.map((tag) => (
               <button
                 key={tag.id}
                 type="button"
                 className={cn(
                   'px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer',
-                  'border border-divider hover:opacity-80 transition-opacity'
+                  'border border-divider hover:opacity-80 transition-opacity duration-100'
                 )}
                 style={tag.color ? { backgroundColor: tag.color + '22', borderColor: tag.color, color: tag.color } : undefined}
               >
@@ -188,16 +188,19 @@ export default function HighlighterView() {
 
       {/* Highlights list */}
       <div className="space-y-2">
-        <h3 className="text-xs font-medium text-text/40 uppercase tracking-wider">
+        <h3 className="text-[13px] font-medium text-text-muted uppercase tracking-wider">
           Highlights {highlights.length > 0 && `(${highlights.length})`}
         </h3>
 
         {isLoading && (
-          <p className="text-sm text-text/40 py-4 text-center">Loading...</p>
+          <p className="text-sm text-text-muted py-4 text-center">Loading...</p>
         )}
 
         {!isLoading && highlights.length === 0 && (
-          <p className="text-sm text-text/30 py-6 text-center">No highlights yet.</p>
+          <div className="flex flex-col items-center py-8 gap-1">
+            <h4 className="text-[15px] font-medium text-text">No highlights yet</h4>
+            <p className="text-sm text-text-secondary">Select a clip and highlight text above</p>
+          </div>
         )}
 
         <div className="space-y-2">
@@ -216,12 +219,12 @@ export default function HighlighterView() {
                       <span className={cn('w-2.5 h-2.5 rounded-full mt-1 shrink-0', cfg.dot)} />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm text-text leading-relaxed">
-                          "{h.text}"
+                          &ldquo;{h.text}&rdquo;
                         </p>
                         {h.note && (
-                          <p className="text-xs text-text/50 mt-1 italic">{h.note}</p>
+                          <p className="text-xs text-text-secondary mt-1 italic">{h.note}</p>
                         )}
-                        <span className="text-[10px] text-text/30 mt-1 block">
+                        <span className="text-[10px] text-text-muted mt-1 block">
                           {new Date(h.created_at).toLocaleDateString()}
                         </span>
                       </div>

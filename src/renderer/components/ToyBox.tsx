@@ -33,10 +33,10 @@ export default function ToyBox() {
             key={tab.key}
             onClick={() => setToyView(tab.key)}
             className={cn(
-              'px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer',
+              'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors duration-150 cursor-pointer',
               toyView === tab.key
-                ? 'bg-surface text-gold shadow-sm shadow-shadow'
-                : 'bg-transparent text-text/50 hover:text-text hover:bg-surface-hover'
+                ? 'bg-selected text-text'
+                : 'bg-transparent text-text-muted hover:text-text hover:bg-surface-hover'
             )}
           >
             {tab.label}
@@ -49,9 +49,9 @@ export default function ToyBox() {
         <AnimatePresence mode="wait">
           <motion.div
             key={toyView}
-            initial={{ opacity: 0, y: 6 }}
+            initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
+            exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.15 }}
             className="h-full"
           >
