@@ -39,12 +39,41 @@ export type AppMode = 'launch' | 'toys' | 'clock'
 export type LaunchView = 'project' | 'role' | 'tool'
 export type ToyView = 'clipper' | 'highlighter' | 'reader'
 
+// ─── AI Types ───
+
+export type AiDepartment = 'shomu' | 'eigyo' | 'keiri'
+
+export interface AiRequest {
+  department: AiDepartment
+  message: string
+  context?: Record<string, unknown>
+}
+
+export interface AiSuccessResponse {
+  ok: true
+  department: AiDepartment
+  content: string
+  tokenUsage?: { input: number; output: number }
+}
+
+export interface AiErrorResponse {
+  ok: false
+  error: string
+  errorType: 'rate_limit' | 'auth' | 'network'
+}
+
+export type AiResponse = AiSuccessResponse | AiErrorResponse
+
+export interface AiStatus {
+  configured: boolean
+}
+
 declare global {
   interface Window {
     plunge: {
       openExternal: (url: string) => Promise<void>
+      // NOTE: These interfaces must stay in sync with src/main/schema.ts
       db: {
-        query: (sql: string, params?: unknown[]) => Promise<unknown>
         links: { all: () => Promise<Link[]> }
         tags: { all: () => Promise<Tag[]> }
         clips: {
@@ -55,6 +84,10 @@ declare global {
           all: () => Promise<Highlight[]>
           insert: (h: { clip_id: number; text: string; color?: string; note?: string }) => Promise<{ lastInsertRowid: number }>
         }
+      }
+      ai: {
+        status: () => Promise<AiStatus>
+        ask: (req: AiRequest) => Promise<AiResponse>
       }
     }
   }

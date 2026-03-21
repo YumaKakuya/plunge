@@ -2,12 +2,21 @@ import Database from 'better-sqlite3'
 import path from 'path'
 import { app } from 'electron'
 import fs from 'fs'
+import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
+import { eq, and } from 'drizzle-orm'
+import * as schema from './schema'
 
 let db: Database.Database | null = null
+let drizzleDb: BetterSQLite3Database<typeof schema> | null = null
 
 export function getDb(): Database.Database {
   if (!db) throw new Error('Database not initialized')
   return db
+}
+
+export function getDrizzle(): BetterSQLite3Database<typeof schema> {
+  if (!drizzleDb) throw new Error('Database not initialized')
+  return drizzleDb
 }
 
 export function initDatabase() {
@@ -19,7 +28,7 @@ export function initDatabase() {
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
 
-  // ─── Schema ───
+  // ─── Schema (raw SQL — no drizzle-kit, Electron apps don't use migrations) ───
   db.exec(`
     -- Launcher
     CREATE TABLE IF NOT EXISTS links (
@@ -85,55 +94,34 @@ export function initDatabase() {
     );
   `)
 
-  // Seed default tags if empty
-  const tagCount = db.prepare('SELECT COUNT(*) as c FROM tags').get() as { c: number }
-  if (tagCount.c === 0) {
-    const insertTag = db.prepare('INSERT INTO tags (axis, value, color) VALUES (?, ?, ?)')
-    const seedTags = db.transaction(() => {
+  // ─── Drizzle wrapper ───
+  drizzleDb = drizzle(db, { schema })
+
+  // ─── Seed default tags if empty ───
+  const tagRows = drizzleDb.select().from(schema.tags).all()
+  if (tagRows.length === 0) {
+    const seedTags = [
       // Projects
-      insertTag.run('project', 'Veto.', '#8B5CF6')
-      insertTag.run('project', 'Hatch.', '#10B981')
-      insertTag.run('project', 'Coffer.', '#F59E0B')
-      insertTag.run('project', 'Boardroom.', '#3B82F6')
-      insertTag.run('project', 'Plunge.', '#EC4899')
+      { axis: 'project', value: 'Veto.', color: '#8B5CF6' },
+      { axis: 'project', value: 'Hatch.', color: '#10B981' },
+      { axis: 'project', value: 'Coffer.', color: '#F59E0B' },
+      { axis: 'project', value: 'Boardroom.', color: '#3B82F6' },
+      { axis: 'project', value: 'Plunge.', color: '#EC4899' },
       // Roles
-      insertTag.run('role', 'Cro', '#8B5CF6')
-      insertTag.run('role', 'Gem', '#3B82F6')
-      insertTag.run('role', 'GPT', '#10B981')
-      insertTag.run('role', 'Antigravity', '#F59E0B')
+      { axis: 'role', value: 'Cro', color: '#8B5CF6' },
+      { axis: 'role', value: 'Gem', color: '#3B82F6' },
+      { axis: 'role', value: 'GPT', color: '#10B981' },
+      { axis: 'role', value: 'Antigravity', color: '#F59E0B' },
       // Tools
-      insertTag.run('tool', 'Claude', '#8B5CF6')
-      insertTag.run('tool', 'Gemini', '#3B82F6')
-      insertTag.run('tool', 'Cursor', '#06B6D4')
-      insertTag.run('tool', 'GitHub', '#4B5563')
-      insertTag.run('tool', 'Vercel', '#000000')
-      insertTag.run('tool', 'Supabase', '#10B981')
-    })
-    seedTags()
+      { axis: 'tool', value: 'Claude', color: '#8B5CF6' },
+      { axis: 'tool', value: 'Gemini', color: '#3B82F6' },
+      { axis: 'tool', value: 'Cursor', color: '#06B6D4' },
+      { axis: 'tool', value: 'GitHub', color: '#4B5563' },
+      { axis: 'tool', value: 'Vercel', color: '#000000' },
+      { axis: 'tool', value: 'Supabase', color: '#10B981' },
+    ]
+    drizzleDb.insert(schema.tags).values(seedTags).run()
   }
 
-  // Seed default links if empty
-  const linkCount = db.prepare('SELECT COUNT(*) as c FROM links').get() as { c: number }
-  if (linkCount.c === 0) {
-    const insertLink = db.prepare('INSERT INTO links (name, url, icon, sort_order) VALUES (?, ?, ?, ?)')
-    const insertLinkTag = db.prepare('INSERT INTO link_tags (link_id, tag_id) VALUES (?, ?)')
-    const seedLinks = db.transaction(() => {
-      // Claude
-      const r1 = insertLink.run('Claude', 'https://claude.ai', '🟣', 1)
-      insertLinkTag.run(r1.lastInsertRowid, 11) // tool:Claude
-      // Gemini
-      const r2 = insertLink.run('Gemini', 'https://gemini.google.com', '🔵', 2)
-      insertLinkTag.run(r2.lastInsertRowid, 12) // tool:Gemini
-      // GitHub
-      const r3 = insertLink.run('GitHub', 'https://github.com', '🐙', 3)
-      insertLinkTag.run(r3.lastInsertRowid, 14) // tool:GitHub
-      // Vercel
-      const r4 = insertLink.run('Vercel', 'https://vercel.com', '▲', 4)
-      insertLinkTag.run(r4.lastInsertRowid, 15) // tool:Vercel
-      // Supabase
-      const r5 = insertLink.run('Supabase', 'https://supabase.com', '💚', 5)
-      insertLinkTag.run(r5.lastInsertRowid, 16) // tool:Supabase
-    })
-    seedLinks()
-  }
+  // Seed links removed — user populates their own links
 }

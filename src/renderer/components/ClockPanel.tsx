@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { cn } from '@/renderer/lib/utils'
+import { Button } from '@/renderer/components/ui/button'
+import { Card, CardContent } from '@/renderer/components/ui/card'
 
-// ─── World Clock ───
+// --- World Clock ---
 
 interface TimezoneEntry {
   city: string
@@ -44,7 +47,7 @@ function formatTzAbbr(date: Date, tz: string) {
   return parts.find((p) => p.type === 'timeZoneName')?.value ?? tz
 }
 
-// ─── Calendar ───
+// --- Calendar ---
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate()
@@ -108,19 +111,18 @@ export default function ClockPanel() {
         </h3>
         <div className="grid grid-cols-2 gap-2">
           {TIMEZONES.map((entry) => (
-            <div
-              key={entry.tz}
-              className="p-3 bg-surface border border-divider rounded-lg flex items-baseline justify-between"
-            >
-              <div>
-                <span className="text-sm font-medium text-text">{entry.city}</span>
-                <span className="text-[10px] text-text/30 ml-1.5">{formatTzAbbr(now, entry.tz)}</span>
-                <p className="text-[11px] text-text/40 mt-0.5">{formatDate(now, entry.tz)}</p>
-              </div>
-              <span className="text-lg font-mono text-text tabular-nums">
-                {formatTime(now, entry.tz)}
-              </span>
-            </div>
+            <Card key={entry.tz} className="bg-surface border-divider">
+              <CardContent className="p-3 flex items-baseline justify-between">
+                <div>
+                  <span className="text-sm font-medium text-text">{entry.city}</span>
+                  <span className="text-[10px] text-text/30 ml-1.5">{formatTzAbbr(now, entry.tz)}</span>
+                  <p className="text-[11px] text-text/40 mt-0.5">{formatDate(now, entry.tz)}</p>
+                </div>
+                <span className="text-lg font-mono text-text tabular-nums">
+                  {formatTime(now, entry.tz)}
+                </span>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
@@ -132,62 +134,66 @@ export default function ClockPanel() {
             Calendar
           </h3>
           <div className="flex items-center gap-2">
-            <button
+            <Button
               onClick={prevMonth}
-              className="w-6 h-6 flex items-center justify-center text-text/40 hover:text-text
-                         bg-surface border border-divider rounded cursor-pointer transition-colors text-xs"
+              variant="ghost"
+              size="icon"
+              className="w-6 h-6 text-text/40 hover:text-text cursor-pointer text-xs"
             >
               &lt;
-            </button>
+            </Button>
             <span className="text-sm font-medium text-text min-w-[140px] text-center">
               {MONTHS[calMonth]} {calYear}
             </span>
-            <button
+            <Button
               onClick={nextMonth}
-              className="w-6 h-6 flex items-center justify-center text-text/40 hover:text-text
-                         bg-surface border border-divider rounded cursor-pointer transition-colors text-xs"
+              variant="ghost"
+              size="icon"
+              className="w-6 h-6 text-text/40 hover:text-text cursor-pointer text-xs"
             >
               &gt;
-            </button>
+            </Button>
           </div>
         </div>
 
-        <div className="bg-surface border border-divider rounded-lg p-3">
-          {/* Weekday headers */}
-          <div className="grid grid-cols-7 mb-1">
-            {WEEKDAYS.map((d) => (
-              <div key={d} className="text-center text-[10px] font-medium text-text/30 py-1">
-                {d}
-              </div>
-            ))}
-          </div>
-
-          {/* Day grid */}
-          <div className="grid grid-cols-7">
-            {/* Empty cells before first day */}
-            {Array.from({ length: firstDay }).map((_, i) => (
-              <div key={`empty-${i}`} className="py-1.5" />
-            ))}
-
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const day = i + 1
-              const isToday = isCurrentMonth && day === today.getDate()
-              return (
-                <div
-                  key={day}
-                  className={[
-                    'py-1.5 text-center text-xs transition-colors rounded',
-                    isToday
-                      ? 'bg-gold text-white font-bold'
-                      : 'text-text/70',
-                  ].join(' ')}
-                >
-                  {day}
+        <Card className="bg-surface border-divider">
+          <CardContent className="p-3">
+            {/* Weekday headers */}
+            <div className="grid grid-cols-7 mb-1">
+              {WEEKDAYS.map((d) => (
+                <div key={d} className="text-center text-[10px] font-medium text-text/30 py-1">
+                  {d}
                 </div>
-              )
-            })}
-          </div>
-        </div>
+              ))}
+            </div>
+
+            {/* Day grid */}
+            <div className="grid grid-cols-7">
+              {/* Empty cells before first day */}
+              {Array.from({ length: firstDay }).map((_, i) => (
+                <div key={`empty-${i}`} className="py-1.5" />
+              ))}
+
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const day = i + 1
+                const isToday = isCurrentMonth && day === today.getDate()
+                return (
+                  <div
+                    key={day}
+                    className={cn(
+                      'py-1.5 text-center text-xs transition-colors rounded',
+                      isToday
+                        ? 'bg-gold text-white font-bold'
+                        : 'text-text/70'
+                    )}
+                  >
+                    {day}
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </motion.div>
   )

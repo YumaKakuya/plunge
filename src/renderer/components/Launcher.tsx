@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useEffect } from 'react'
 import { useAppStore } from '@/renderer/stores/appStore'
 import type { Link, Tag } from '@/shared/types'
+import { Button } from '@/renderer/components/ui/button'
+import { Card } from '@/renderer/components/ui/card'
 
 function parseTags(link: Link): Tag[] {
   if (typeof link.tags === 'string') {
@@ -87,54 +89,57 @@ export default function Launcher() {
           <motion.div
             key={key}
             layout
-            className="rounded-lg bg-surface border border-divider overflow-hidden"
+            className="overflow-hidden"
           >
-            <button
-              onClick={() => toggleCard(key)}
-              className="w-full px-4 py-3 text-left text-sm font-semibold text-text
-                         hover:bg-surface-hover transition-colors cursor-pointer flex items-center justify-between"
-            >
-              <span>{key}</span>
-              <span className="text-text/40 text-xs">{items.length}</span>
-            </button>
+            <Card className="bg-surface border-divider overflow-hidden">
+              <Button
+                variant="ghost"
+                onClick={() => toggleCard(key)}
+                className="w-full justify-between px-4 py-3 text-left text-sm font-semibold text-text
+                           hover:bg-surface-hover cursor-pointer h-auto rounded-none"
+              >
+                <span>{key}</span>
+                <span className="text-text/40 text-xs font-normal">{items.length}</span>
+              </Button>
 
-            <AnimatePresence initial={false}>
-              {isExpanded && (
-                <motion.div
-                  key="content"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: 'easeInOut' }}
-                  className="overflow-hidden"
-                >
+              <AnimatePresence initial={false}>
+                {isExpanded && (
                   <motion.div
-                    className="grid grid-cols-4 gap-2 px-4 pb-3"
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate="visible"
+                    key="content"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: 'easeInOut' }}
+                    className="overflow-hidden"
                   >
-                    {items.map((link) => (
-                      <motion.button
-                        key={link.id}
-                        variants={itemVariants}
-                        onClick={() => window.plunge.openExternal(link.url)}
-                        className="flex flex-col items-center gap-1.5 p-2 rounded-md
-                                   hover:bg-surface-hover transition-colors cursor-pointer"
-                        title={link.url}
-                      >
-                        <span className="text-xl leading-none">
-                          {link.icon ?? '🔗'}
-                        </span>
-                        <span className="text-[11px] text-text/70 truncate w-full text-center">
-                          {link.name}
-                        </span>
-                      </motion.button>
-                    ))}
+                    <motion.div
+                      className="grid grid-cols-4 gap-2 px-4 pb-3"
+                      variants={containerVariants}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      {items.map((link) => (
+                        <motion.button
+                          key={link.id}
+                          variants={itemVariants}
+                          onClick={() => window.plunge.openExternal(link.url)}
+                          className="flex flex-col items-center gap-1.5 p-2 rounded-md
+                                     hover:bg-surface-hover transition-colors cursor-pointer"
+                          title={link.url}
+                        >
+                          <span className="text-xl leading-none">
+                            {link.icon ?? '\uD83D\uDD17'}
+                          </span>
+                          <span className="text-[11px] text-text/70 truncate w-full text-center">
+                            {link.name}
+                          </span>
+                        </motion.button>
+                      ))}
+                    </motion.div>
                   </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                )}
+              </AnimatePresence>
+            </Card>
           </motion.div>
         )
       })}

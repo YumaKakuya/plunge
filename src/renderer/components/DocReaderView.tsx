@@ -1,5 +1,9 @@
 import { useState, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
+import { Textarea } from '@/renderer/components/ui/textarea'
+import { Button } from '@/renderer/components/ui/button'
+import { Card, CardContent } from '@/renderer/components/ui/card'
+import { useAi, useAiStatus } from '@/renderer/hooks/useAi'
 
 function mdToHtml(md: string): string {
   return md
@@ -35,6 +39,21 @@ export default function DocReaderView() {
   const [paused, setPaused] = useState(false)
   const chunkIndex = useRef(0)
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
+
+  const { ask, isLoading: aiLoading, error: aiError } = useAi()
+  const { data: aiStatus } = useAiStatus()
+
+  const handleNormalize = async () => {
+    if (!markdown.trim() || aiLoading) return
+    const result = await ask(
+      'shomu',
+      'Normalize this markdown. Fix heading levels, clean up lists, fix broken links, normalize whitespace, and ensure consistent formatting. Return ONLY the normalized markdown, no explanations.',
+      { markdown }
+    )
+    if (result) {
+      setMarkdown(result)
+    }
+  }
 
   const plainText = markdown.replace(/[#*`\[\]()_~>-]/g, '').trim()
 
@@ -96,45 +115,62 @@ export default function DocReaderView() {
   return (
     <div className="p-4 space-y-4">
       {/* Input */}
-      <textarea
+      <Textarea
         placeholder="Paste markdown content here..."
         value={markdown}
         onChange={(e) => setMarkdown(e.target.value)}
         rows={6}
-        className="w-full px-3 py-2 text-sm bg-surface border border-divider rounded-lg text-text
-                   placeholder:text-text/30 focus:outline-none focus:border-gold/50 transition-colors
-                   resize-none font-mono"
+        className="font-mono"
       />
+
+      {/* AI Normalize */}
+      {aiStatus?.configured && (
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={handleNormalize}
+            disabled={!markdown.trim() || aiLoading}
+            variant="outline"
+            size="sm"
+            className="cursor-pointer"
+          >
+            {aiLoading ? 'Normalizing...' : 'AI Normalize'}
+          </Button>
+          {aiError && (
+            <span className="text-xs text-red-400">{aiError}</span>
+          )}
+        </div>
+      )}
 
       {/* Speech controls */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex gap-1.5">
-          <button
+          <Button
             onClick={handlePlay}
             disabled={!plainText}
-            className="px-3 py-1.5 text-xs font-medium bg-gold text-white rounded-md cursor-pointer
-                       hover:bg-gold/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            size="sm"
+            className="cursor-pointer"
           >
             {paused ? 'Resume' : speaking ? 'Restart' : 'Read Aloud'}
-          </button>
+          </Button>
           {speaking && (
             <>
-              <button
+              <Button
                 onClick={handlePause}
                 disabled={paused}
-                className="px-3 py-1.5 text-xs font-medium bg-surface border border-divider rounded-md
-                           text-text cursor-pointer hover:bg-surface-hover disabled:opacity-40
-                           disabled:cursor-not-allowed transition-all"
+                variant="outline"
+                size="sm"
+                className="cursor-pointer"
               >
                 Pause
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleStop}
-                className="px-3 py-1.5 text-xs font-medium bg-surface border border-divider rounded-md
-                           text-text cursor-pointer hover:bg-surface-hover transition-all"
+                variant="outline"
+                size="sm"
+                className="cursor-pointer"
               >
                 Stop
-              </button>
+              </Button>
             </>
           )}
         </div>
@@ -163,10 +199,13 @@ export default function DocReaderView() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
-            className="p-4 bg-surface border border-divider rounded-lg text-sm text-text leading-relaxed
-                       select-text"
-            dangerouslySetInnerHTML={{ __html: mdToHtml(markdown) }}
-          />
+          >
+            <Card className="bg-surface border-divider">
+              <CardContent className="p-4 text-sm text-text leading-relaxed select-text">
+                <div dangerouslySetInnerHTML={{ __html: mdToHtml(markdown) }} />
+              </CardContent>
+            </Card>
+          </motion.div>
         </>
       )}
     </div>

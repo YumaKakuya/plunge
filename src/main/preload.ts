@@ -3,7 +3,6 @@ import { contextBridge, ipcRenderer } from 'electron'
 contextBridge.exposeInMainWorld('plunge', {
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
   db: {
-    query: (sql: string, params?: unknown[]) => ipcRenderer.invoke('db:query', sql, params),
     links: {
       all: () => ipcRenderer.invoke('db:links:all'),
     },
@@ -20,5 +19,10 @@ contextBridge.exposeInMainWorld('plunge', {
       insert: (h: { clip_id: number; text: string; color?: string; note?: string }) =>
         ipcRenderer.invoke('db:highlights:insert', h),
     },
+  },
+  ai: {
+    status: () => ipcRenderer.invoke('ai:status'),
+    ask: (req: { department: string; message: string; context?: Record<string, unknown> }) =>
+      ipcRenderer.invoke('ai:ask', req),
   },
 })

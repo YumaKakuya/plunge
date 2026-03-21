@@ -1,6 +1,10 @@
 import { app, BrowserWindow, ipcMain, shell, globalShortcut } from 'electron'
 import path from 'path'
-import { initDatabase, getDb } from './database'
+import { initDatabase, getDrizzle } from './database'
+import { loadConfig } from './config'
+import { initAi, isAiReady, askDepartment, type Department } from './ai'
+import { asc, desc } from 'drizzle-orm'
+import * as schema from './schema'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -10,13 +14,17 @@ function createWindow() {
     height: 800,
     minWidth: 320,
     minHeight: 600,
-    frame: false,
-    titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#F5F1EB',
-      symbolColor: '#4A413B',
-      height: 36,
-    },
+    ...(process.platform === 'linux'
+      ? { frame: true }
+      : {
+          frame: false,
+          titleBarStyle: 'hidden' as const,
+          titleBarOverlay: {
+            color: '#F5F1EB',
+            symbolColor: '#4A413B',
+            height: 36,
+          },
+        }),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -36,7 +44,9 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  loadConfig()
   initDatabase()
+  initAi()
   createWindow()
 
   // Global shortcut to summon Plunge
@@ -67,52 +77,119 @@ ipcMain.handle('shell:openExternal', (_e, url: string) => {
   return shell.openExternal(url)
 })
 
-ipcMain.handle('db:query', (_e, sql: string, params?: unknown[]) => {
-  const db = getDb()
-  const stmt = db.prepare(sql)
-  if (sql.trim().toUpperCase().startsWith('SELECT')) {
-    return params ? stmt.all(...params) : stmt.all()
-  }
-  return params ? stmt.run(...params) : stmt.run()
-})
+// db:query handler REMOVED — raw SQL execution is a security risk
 
 ipcMain.handle('db:links:all', () => {
-  const db = getDb()
-  return db.prepare(`
-    SELECT l.*, json_group_array(json_object('id', t.id, 'axis', t.axis, 'value', t.value, 'color', t.color)) as tags
-    FROM links l
-    LEFT JOIN link_tags lt ON l.id = lt.link_id
-    LEFT JOIN tags t ON lt.tag_id = t.id
-    GROUP BY l.id
-    ORDER BY l.sort_order
-  `).all()
+  const db = getDrizzle()
+  const rows = db.query.links.findMany({
+    orderBy: [asc(schema.links.sortOrder)],
+    with: {
+      linkTags: {
+        with: {
+          tag: true,
+        },
+      },
+    },
+  }).sync()
+  // Map to the shape the renderer expects: { ...link, tags: Tag[] | string }
+  // The renderer's parseTags() expects tags as a JSON string from the old raw query,
+  // so we return a JSON string for backward compatibility.
+  return rows.map((row) => {
+    const tags = row.linkTags.map((lt) => lt.tag)
+    return {
+      id: row.id,
+      name: row.name,
+      url: row.url,
+      icon: row.icon,
+      sort_order: row.sortOrder,
+      tags: JSON.stringify(tags.map((t) => ({
+        id: t.id,
+        axis: t.axis,
+        value: t.value,
+        color: t.color,
+      }))),
+    }
+  })
 })
 
 ipcMain.handle('db:tags:all', () => {
-  const db = getDb()
-  return db.prepare('SELECT * FROM tags ORDER BY axis, value').all()
+  const db = getDrizzle()
+  return db.select().from(schema.tags).orderBy(asc(schema.tags.axis), asc(schema.tags.value)).all()
 })
 
 ipcMain.handle('db:clips:all', () => {
-  const db = getDb()
-  return db.prepare('SELECT * FROM clips ORDER BY clipped_at DESC').all()
+  const db = getDrizzle()
+  const rows = db.select().from(schema.clips).orderBy(desc(schema.clips.clippedAt)).all()
+  // Map camelCase back to snake_case for renderer compatibility
+  return rows.map((row) => ({
+    id: row.id,
+    url: row.url,
+    title: row.title,
+    content: row.content,
+    memo: row.memo,
+    source_type: row.sourceType,
+    clipped_at: row.clippedAt,
+    synced_at: row.syncedAt,
+  }))
 })
 
 ipcMain.handle('db:clips:insert', (_e, clip: { url?: string; title?: string; content: string; memo?: string; source_type?: string }) => {
-  const db = getDb()
-  return db.prepare(
-    'INSERT INTO clips (url, title, content, memo, source_type) VALUES (?, ?, ?, ?, ?)'
-  ).run(clip.url ?? null, clip.title ?? null, clip.content, clip.memo ?? null, clip.source_type ?? 'manual')
+  const db = getDrizzle()
+  return db.insert(schema.clips).values({
+    url: clip.url ?? null,
+    title: clip.title ?? null,
+    content: clip.content,
+    memo: clip.memo ?? null,
+    sourceType: clip.source_type ?? 'manual',
+  }).run()
 })
 
 ipcMain.handle('db:highlights:all', () => {
-  const db = getDb()
-  return db.prepare('SELECT * FROM highlights ORDER BY created_at DESC').all()
+  const db = getDrizzle()
+  const rows = db.select().from(schema.highlights).orderBy(desc(schema.highlights.createdAt)).all()
+  // Map camelCase back to snake_case for renderer compatibility
+  return rows.map((row) => ({
+    id: row.id,
+    clip_id: row.clipId,
+    text: row.text,
+    position: row.position,
+    color: row.color,
+    note: row.note,
+    created_at: row.createdAt,
+  }))
 })
 
 ipcMain.handle('db:highlights:insert', (_e, h: { clip_id: number; text: string; color?: string; note?: string }) => {
-  const db = getDb()
-  return db.prepare(
-    'INSERT INTO highlights (clip_id, text, color, note) VALUES (?, ?, ?, ?)'
-  ).run(h.clip_id, h.text, h.color ?? 'yellow', h.note ?? null)
+  const db = getDrizzle()
+  return db.insert(schema.highlights).values({
+    clipId: h.clip_id,
+    text: h.text,
+    color: h.color ?? 'yellow',
+    note: h.note ?? null,
+  }).run()
+})
+
+// ─── AI Handlers ───
+
+ipcMain.handle('ai:status', () => {
+  return { configured: isAiReady() }
+})
+
+ipcMain.handle('ai:ask', async (_e, req: { department: Department; message: string; context?: Record<string, unknown> }) => {
+  if (!isAiReady()) {
+    return { ok: false, error: 'AI not configured. Add geminiApiKey to ~/.config/plunge/config.json', errorType: 'auth' as const }
+  }
+  try {
+    const result = await askDepartment(req)
+    return { ok: true as const, ...result }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown AI error'
+    const isRateLimit = message.includes('429') || message.toLowerCase().includes('rate')
+    const isAuth = message.includes('401') || message.includes('403') || message.toLowerCase().includes('api key')
+    return {
+      ok: false as const,
+      error: message,
+      errorType: isRateLimit ? 'rate_limit' as const : isAuth ? 'auth' as const : 'network' as const,
+    }
+  }
 })

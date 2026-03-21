@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAppStore } from '@/renderer/stores/appStore'
 import type { ToyView } from '@/shared/types'
+import { cn } from '@/renderer/lib/utils'
 import ClipperView from './ClipperView'
 import HighlighterView from './HighlighterView'
 import DocReaderView from './DocReaderView'
@@ -31,12 +32,12 @@ export default function ToyBox() {
           <button
             key={tab.key}
             onClick={() => setToyView(tab.key)}
-            className={[
+            className={cn(
               'px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer',
               toyView === tab.key
                 ? 'bg-surface text-gold shadow-sm shadow-shadow'
-                : 'bg-transparent text-text/50 hover:text-text hover:bg-surface-hover',
-            ].join(' ')}
+                : 'bg-transparent text-text/50 hover:text-text hover:bg-surface-hover'
+            )}
           >
             {tab.label}
           </button>
