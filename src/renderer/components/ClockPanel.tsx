@@ -20,6 +20,8 @@ const TIMEZONES: TimezoneEntry[] = [
   { city: 'India', tz: 'Asia/Kolkata' },
 ]
 
+const LOCAL_TZ = 'Asia/Tokyo'
+
 function formatTime(date: Date, tz: string) {
   return date.toLocaleTimeString('en-US', {
     timeZone: tz,
@@ -47,6 +49,49 @@ function formatTzAbbr(date: Date, tz: string) {
   return parts.find((p) => p.type === 'timeZoneName')?.value ?? tz
 }
 
+/** Returns true if the local hour in `tz` is between 6am and 6pm */
+function isDaytime(date: Date, tz: string): boolean {
+  const hour = parseInt(
+    date.toLocaleTimeString('en-US', {
+      timeZone: tz,
+      hour12: false,
+      hour: '2-digit',
+    }),
+    10
+  )
+  return hour >= 6 && hour < 18
+}
+
+/** Split a time string "HH:MM:SS" around the colon for animated separator */
+interface TimePartsProps {
+  timeStr: string
+  colonVisible: boolean
+}
+
+function TimeParts({ timeStr, colonVisible }: TimePartsProps) {
+  // timeStr format: "HH:MM:SS"
+  const [hh, mm, ss] = timeStr.split(':')
+  return (
+    <span className="text-xl font-mono text-text tabular-nums">
+      {hh}
+      <span
+        style={{ opacity: colonVisible ? 1 : 0.25 }}
+        className="transition-opacity duration-300"
+      >
+        :
+      </span>
+      {mm}
+      <span
+        style={{ opacity: colonVisible ? 1 : 0.25 }}
+        className="transition-opacity duration-300"
+      >
+        :
+      </span>
+      {ss}
+    </span>
+  )
+}
+
 // --- Calendar ---
 
 function getDaysInMonth(year: number, month: number) {
@@ -65,11 +110,16 @@ const MONTHS = [
 
 export default function ClockPanel() {
   const [now, setNow] = useState(new Date())
+  const [colonVisible, setColonVisible] = useState(true)
   const [calYear, setCalYear] = useState(now.getFullYear())
   const [calMonth, setCalMonth] = useState(now.getMonth())
+  const [selectedDate, setSelectedDate] = useState<number | null>(null)
 
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000)
+    const id = setInterval(() => {
+      setNow(new Date())
+      setColonVisible((v) => !v)
+    }, 500)
     return () => clearInterval(id)
   }, [])
 
@@ -97,6 +147,11 @@ export default function ClockPanel() {
     }
   }
 
+  // Compute which "row index" today falls in (0-based), for row highlight
+  const todayRowIndex = isCurrentMonth
+    ? Math.floor((firstDay + today.getDate() - 1) / 7)
+    : -1
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -110,20 +165,36 @@ export default function ClockPanel() {
           World Clock
         </h3>
         <div className="grid grid-cols-2 gap-2">
-          {TIMEZONES.map((entry) => (
-            <Card key={entry.tz} className="bg-surface border-divider">
-              <CardContent className="p-3 flex items-baseline justify-between">
-                <div>
-                  <span className="text-sm font-medium text-text">{entry.city}</span>
-                  <span className="text-xs text-text-muted ml-1.5">{formatTzAbbr(now, entry.tz)}</span>
-                  <p className="text-xs text-text-muted mt-0.5">{formatDate(now, entry.tz)}</p>
-                </div>
-                <span className="text-xl font-mono text-text tabular-nums">
-                  {formatTime(now, entry.tz)}
-                </span>
-              </CardContent>
-            </Card>
-          ))}
+          {TIMEZONES.map((entry) => {
+            const isLocal = entry.tz === LOCAL_TZ
+            const daytime = isDaytime(now, entry.tz)
+            return (
+              <Card
+                key={entry.tz}
+                className={cn(
+                  'bg-surface border-divider',
+                  isLocal && 'border-l-2 border-l-gold'
+                )}
+              >
+                <CardContent className="p-3 flex items-baseline justify-between">
+                  <div>
+                    <span className="text-sm font-medium text-text">
+                      {entry.city}
+                    </span>
+                    <span className="ml-1 text-[11px] select-none" aria-hidden>
+                      {daytime ? '☀' : '☽'}
+                    </span>
+                    <span className="text-xs text-text-muted ml-1">{formatTzAbbr(now, entry.tz)}</span>
+                    <p className="text-xs text-text-muted mt-0.5">{formatDate(now, entry.tz)}</p>
+                  </div>
+                  <TimeParts
+                    timeStr={formatTime(now, entry.tz)}
+                    colonVisible={colonVisible}
+                  />
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
       </div>
 
@@ -160,38 +231,64 @@ export default function ClockPanel() {
           <CardContent className="p-4">
             {/* Weekday headers */}
             <div className="grid grid-cols-7 mb-1">
-              {WEEKDAYS.map((d) => (
-                <div key={d} className="text-center text-[11px] font-medium text-text-muted py-1">
+              {WEEKDAYS.map((d, idx) => (
+                <div
+                  key={d}
+                  className={cn(
+                    'text-center text-[11px] font-medium py-1',
+                    idx === 0 || idx === 6 ? 'text-text-muted/60' : 'text-text-muted'
+                  )}
+                >
                   {d}
                 </div>
               ))}
             </div>
 
-            {/* Day grid */}
-            <div className="grid grid-cols-7">
-              {/* Empty cells before first day */}
-              {Array.from({ length: firstDay }).map((_, i) => (
-                <div key={`empty-${i}`} className="py-1.5" />
-              ))}
+            {/* Day grid — rendered row by row for row-level highlight */}
+            {Array.from({ length: Math.ceil((firstDay + daysInMonth) / 7) }).map((_, rowIdx) => {
+              const isCurrentWeekRow = rowIdx === todayRowIndex
+              return (
+                <div
+                  key={rowIdx}
+                  className={cn(
+                    'grid grid-cols-7 rounded',
+                    isCurrentWeekRow && 'bg-surface-hover'
+                  )}
+                >
+                  {Array.from({ length: 7 }).map((_, colIdx) => {
+                    const cellIndex = rowIdx * 7 + colIdx
+                    const day = cellIndex - firstDay + 1
+                    const isValid = day >= 1 && day <= daysInMonth
+                    const isToday = isCurrentMonth && isValid && day === today.getDate()
+                    const isSelected = isValid && day === selectedDate
+                    const isWeekend = colIdx === 0 || colIdx === 6
 
-              {Array.from({ length: daysInMonth }).map((_, i) => {
-                const day = i + 1
-                const isToday = isCurrentMonth && day === today.getDate()
-                return (
-                  <div
-                    key={day}
-                    className={cn(
-                      'py-1.5 text-center text-xs transition-colors duration-100 rounded',
-                      isToday
-                        ? 'bg-gold text-white font-bold'
-                        : 'text-text-secondary'
-                    )}
-                  >
-                    {day}
-                  </div>
-                )
-              })}
-            </div>
+                    if (!isValid) {
+                      return <div key={colIdx} className="py-1.5" />
+                    }
+
+                    return (
+                      <button
+                        key={colIdx}
+                        onClick={() => setSelectedDate(day === selectedDate ? null : day)}
+                        className={cn(
+                          'py-1.5 text-center text-xs transition-colors duration-100 rounded cursor-pointer',
+                          isToday
+                            ? 'bg-gold text-white font-bold'
+                            : isWeekend
+                            ? 'text-text-muted/60'
+                            : 'text-text-secondary',
+                          isSelected && !isToday && 'ring-1 ring-gold',
+                          !isToday && 'hover:bg-surface-hover'
+                        )}
+                      >
+                        {day}
+                      </button>
+                    )
+                  })}
+                </div>
+              )
+            })}
           </CardContent>
         </Card>
       </div>
