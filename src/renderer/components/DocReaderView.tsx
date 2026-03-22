@@ -34,6 +34,8 @@ const CHUNK_SIZE = 2000
 
 export default function DocReaderView() {
   const [markdown, setMarkdown] = useState('')
+  const [fileName, setFileName] = useState<string | null>(null)
+  const [fileLoading, setFileLoading] = useState(false)
   const [speed, setSpeed] = useState(1)
   const [speaking, setSpeaking] = useState(false)
   const [paused, setPaused] = useState(false)
@@ -42,6 +44,25 @@ export default function DocReaderView() {
 
   const { ask, isLoading: aiLoading, error: aiError } = useAi()
   const { data: aiStatus } = useAiStatus()
+
+  const handleOpenFile = async () => {
+    setFileLoading(true)
+    try {
+      const filePath = await window.plunge.dialog.openFile()
+      if (!filePath) return
+      const name = filePath.split('/').pop() ?? filePath.split('\\').pop() ?? filePath
+      let content: string
+      if (filePath.endsWith('.docx')) {
+        content = await window.plunge.util.parseDocx(filePath)
+      } else {
+        content = await window.plunge.util.readFile(filePath)
+      }
+      setMarkdown(content)
+      setFileName(name)
+    } finally {
+      setFileLoading(false)
+    }
+  }
 
   const handleNormalize = async () => {
     if (!markdown.trim() || aiLoading) return
@@ -114,6 +135,24 @@ export default function DocReaderView() {
 
   return (
     <div className="p-4 space-y-4">
+      {/* Open File */}
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={handleOpenFile}
+          disabled={fileLoading}
+          variant="outline"
+          size="sm"
+          className="cursor-pointer"
+        >
+          {fileLoading ? 'Loading...' : 'Open File'}
+        </Button>
+        {fileName && (
+          <span className="text-xs text-text-muted truncate max-w-[200px]" title={fileName}>
+            {fileName}
+          </span>
+        )}
+      </div>
+
       {/* Input */}
       <Textarea
         placeholder="Paste markdown content here..."

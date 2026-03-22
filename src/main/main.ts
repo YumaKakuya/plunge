@@ -1,5 +1,8 @@
-import { app, BrowserWindow, ipcMain, shell, globalShortcut } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, globalShortcut, dialog } from 'electron'
 import path from 'path'
+import fs from 'fs'
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const mammoth = require('mammoth') as { convertToMarkdown: (input: { buffer: Buffer }) => Promise<{ value: string }> }
 import { initDatabase, getDrizzle } from './database'
 import { loadConfig } from './config'
 import { initAi, isAiReady, askDepartment, type Department } from './ai'
@@ -167,6 +170,32 @@ ipcMain.handle('db:highlights:insert', (_e, h: { clip_id: number; text: string; 
     color: h.color ?? 'yellow',
     note: h.note ?? null,
   }).run()
+})
+
+// ─── Dialog & File Handlers ───
+
+ipcMain.handle('dialog:openFile', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [
+      { name: 'Documents', extensions: ['md', 'docx'] },
+    ],
+  })
+  if (result.canceled || result.filePaths.length === 0) return null
+  return result.filePaths[0]
+})
+
+ipcMain.handle('util:readFile', (_e, filePath: string) => {
+  if (!filePath.endsWith('.md')) {
+    throw new Error('Only .md files are supported by util:readFile')
+  }
+  return fs.readFileSync(filePath, 'utf-8')
+})
+
+ipcMain.handle('util:parseDocx', async (_e, filePath: string) => {
+  const buffer = fs.readFileSync(filePath)
+  const result = await mammoth.convertToMarkdown({ buffer })
+  return result.value
 })
 
 // ─── AI Handlers ───

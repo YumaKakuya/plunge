@@ -25,4 +25,11 @@ contextBridge.exposeInMainWorld('plunge', {
     ask: (req: { department: string; message: string; context?: Record<string, unknown> }) =>
       ipcRenderer.invoke('ai:ask', req),
   },
+  dialog: {
+    openFile: () => ipcRenderer.invoke('dialog:openFile'),
+  },
+  util: {
+    readFile: (filePath: string) => ipcRenderer.invoke('util:readFile', filePath),
+    parseDocx: (filePath: string) => ipcRenderer.invoke('util:parseDocx', filePath),
+  },
 })

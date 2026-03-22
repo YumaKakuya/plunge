@@ -89,6 +89,13 @@ declare global {
         status: () => Promise<AiStatus>
         ask: (req: AiRequest) => Promise<AiResponse>
       }
+      dialog: {
+        openFile: () => Promise<string | null>
+      }
+      util: {
+        readFile: (path: string) => Promise<string>
+        parseDocx: (path: string) => Promise<string>
+      }
     }
   }
 }
