@@ -1,9 +1,10 @@
-import { app, BrowserWindow, ipcMain, shell, globalShortcut } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, shell, globalShortcut } from 'electron'
 import path from 'path'
+import { autoUpdater } from 'electron-updater'
 import { initDatabase, getDrizzle } from './database'
 import { loadConfig } from './config'
 import { initAi, isAiReady, askDepartment, type Department } from './ai'
-import { asc, desc } from 'drizzle-orm'
+import { asc, desc, eq } from 'drizzle-orm'
 import * as schema from './schema'
 
 let mainWindow: BrowserWindow | null = null
@@ -49,6 +50,37 @@ app.whenReady().then(() => {
   initAi()
   createWindow()
 
+  // Auto-update — check on startup and every 3 hours
+  autoUpdater.logger = null // suppress default logging
+  autoUpdater.autoDownload = true
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('update-downloaded', () => {
+    if (mainWindow) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Update Ready',
+        message: 'A new version has been downloaded. Restart now to apply the update?',
+        buttons: ['Restart', 'Later'],
+        defaultId: 0,
+      }).then((result) => {
+        if (result.response === 0) {
+          autoUpdater.quitAndInstall()
+        }
+      })
+    }
+  })
+
+  autoUpdater.on('error', (err) => {
+    console.log('[AutoUpdate] Error:', err.message)
+  })
+
+  // Initial check (delay 3s to let app settle)
+  setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 3000)
+
+  // Periodic check every 3 hours
+  setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 3 * 60 * 60 * 1000)
+
   // Global shortcut to summon Plunge
   globalShortcut.register('CommandOrControl+Shift+P', () => {
     if (mainWindow) {
@@ -72,6 +104,15 @@ app.on('will-quit', () => {
 })
 
 // ─── IPC Handlers ───
+
+ipcMain.handle('app:checkForUpdates', async () => {
+  try {
+    const result = await autoUpdater.checkForUpdates()
+    return { available: !!result?.updateInfo }
+  } catch {
+    return { available: false }
+  }
+})
 
 ipcMain.handle('shell:openExternal', (_e, url: string) => {
   return shell.openExternal(url)
@@ -167,6 +208,58 @@ ipcMain.handle('db:highlights:insert', (_e, h: { clip_id: number; text: string; 
     color: h.color ?? 'yellow',
     note: h.note ?? null,
   }).run()
+})
+
+ipcMain.handle('db:links:insert', (_e, data: { name: string; url: string; icon?: string; tagIds?: number[] }) => {
+  const db = getDrizzle()
+  const result = db.insert(schema.links).values({
+    name: data.name,
+    url: data.url,
+    icon: data.icon ?? null,
+  }).returning().get()
+
+  if (data.tagIds && data.tagIds.length > 0) {
+    for (const tagId of data.tagIds) {
+      db.insert(schema.linkTags).values({ linkId: result.id, tagId }).run()
+    }
+  }
+
+  return result
+})
+
+ipcMain.handle('db:links:delete', (_e, linkId: number) => {
+  const db = getDrizzle()
+  return db.delete(schema.links).where(eq(schema.links.id, linkId)).run()
+})
+
+ipcMain.handle('util:fetchMeta', async (_e, url: string) => {
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 5000)
+    const res = await fetch(url, { signal: controller.signal })
+    clearTimeout(timeout)
+    const html = await res.text()
+
+    const titleMatch = html.match(/<title>([^<]*)<\/title>/)
+    const title = titleMatch ? titleMatch[1].trim() : ''
+
+    const iconMatch = html.match(/<link[^>]*rel=["'](?:shortcut )?icon["'][^>]*href=["']([^"']+)["']/)
+    let favicon: string | null = null
+    if (iconMatch) {
+      favicon = iconMatch[1]
+      // Resolve relative URLs
+      if (favicon && !favicon.startsWith('http')) {
+        const origin = new URL(url).origin
+        favicon = favicon.startsWith('/') ? origin + favicon : origin + '/' + favicon
+      }
+    } else {
+      favicon = new URL(url).origin + '/favicon.ico'
+    }
+
+    return { title, favicon }
+  } catch {
+    return { title: '', favicon: null }
+  }
 })
 
 // ─── AI Handlers ───

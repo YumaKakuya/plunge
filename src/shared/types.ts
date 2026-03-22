@@ -72,9 +72,16 @@ declare global {
   interface Window {
     plunge: {
       openExternal: (url: string) => Promise<void>
+      app: {
+        checkForUpdates: () => Promise<{ available: boolean }>
+      }
       // NOTE: These interfaces must stay in sync with src/main/schema.ts
       db: {
-        links: { all: () => Promise<Link[]> }
+        links: {
+          all: () => Promise<Link[]>
+          insert: (data: { name: string; url: string; icon?: string; tagIds?: number[] }) => Promise<{ id: number; name: string; url: string; icon: string | null; sortOrder: number | null }>
+          delete: (id: number) => Promise<void>
+        }
         tags: { all: () => Promise<Tag[]> }
         clips: {
           all: () => Promise<Clip[]>
@@ -84,6 +91,9 @@ declare global {
           all: () => Promise<Highlight[]>
           insert: (h: { clip_id: number; text: string; color?: string; note?: string }) => Promise<{ lastInsertRowid: number }>
         }
+      }
+      util: {
+        fetchMeta: (url: string) => Promise<{ title: string; favicon: string | null }>
       }
       ai: {
         status: () => Promise<AiStatus>

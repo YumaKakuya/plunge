@@ -2,9 +2,15 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('plunge', {
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
+  app: {
+    checkForUpdates: () => ipcRenderer.invoke('app:checkForUpdates'),
+  },
   db: {
     links: {
       all: () => ipcRenderer.invoke('db:links:all'),
+      insert: (data: { name: string; url: string; icon?: string; tagIds?: number[] }) =>
+        ipcRenderer.invoke('db:links:insert', data),
+      delete: (id: number) => ipcRenderer.invoke('db:links:delete', id),
     },
     tags: {
       all: () => ipcRenderer.invoke('db:tags:all'),
@@ -19,6 +25,9 @@ contextBridge.exposeInMainWorld('plunge', {
       insert: (h: { clip_id: number; text: string; color?: string; note?: string }) =>
         ipcRenderer.invoke('db:highlights:insert', h),
     },
+  },
+  util: {
+    fetchMeta: (url: string) => ipcRenderer.invoke('util:fetchMeta', url),
   },
   ai: {
     status: () => ipcRenderer.invoke('ai:status'),
