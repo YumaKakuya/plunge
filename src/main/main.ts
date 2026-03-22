@@ -240,13 +240,14 @@ ipcMain.handle('db:highlights:all', () => {
   }))
 })
 
-ipcMain.handle('db:highlights:insert', (_e, h: { clip_id: number; text: string; color?: string; note?: string }) => {
+ipcMain.handle('db:highlights:insert', (_e, h: { clip_id: number; text: string; color?: string; note?: string; position?: string }) => {
   const db = getDrizzle()
   const highlightResult = db.insert(schema.highlights).values({
     clipId: h.clip_id,
     text: h.text,
     color: h.color ?? 'yellow',
     note: h.note ?? null,
+    position: h.position ?? null,
   }).returning().get()
   // Auto-enqueue to AXIS outbox
   db.insert(schema.axisOutbox).values({
@@ -373,6 +374,57 @@ ipcMain.handle('util:fetchMeta', async (_e, url: string) => {
     return { title, favicon }
   } catch {
     return { title: '', favicon: null }
+  }
+})
+
+ipcMain.handle('util:extractPage', async (_e, url: string) => {
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
+    const res = await fetch(url, { signal: controller.signal })
+    clearTimeout(timeout)
+    const html = await res.text()
+
+    // Title
+    const titleMatch = html.match(/<title>([^<]*)<\/title>/i)
+    const title = titleMatch ? titleMatch[1].trim() : ''
+
+    // Meta description
+    const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["']/i)
+    const description = descMatch ? descMatch[1].trim() : ''
+
+    // Favicon (reuse existing fetchMeta logic pattern)
+    const iconMatch = html.match(/<link[^>]*rel=["'](?:shortcut )?icon["'][^>]*href=["']([^"']+)["']/i)
+    let favicon: string | null = null
+    if (iconMatch) {
+      favicon = iconMatch[1]
+      if (!favicon.startsWith('http')) {
+        const origin = new URL(url).origin
+        favicon = favicon.startsWith('/') ? origin + favicon : origin + '/' + favicon
+      }
+    }
+
+    // Content extraction: prefer <article> or <main>, fall back to <body>
+    let content = ''
+    const articleMatch = html.match(/<(?:article|main)[^>]*>([\s\S]*?)<\/(?:article|main)>/i)
+    if (articleMatch) {
+      content = articleMatch[1]
+    } else {
+      const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
+      content = bodyMatch ? bodyMatch[1] : html
+    }
+    // Strip nav, header, footer, script, style, noscript tags and their contents
+    content = content.replace(/<(?:nav|header|footer|script|style|noscript|aside)[^>]*>[\s\S]*?<\/(?:nav|header|footer|script|style|noscript|aside)>/gi, '')
+    // Strip all remaining HTML tags
+    content = content.replace(/<[^>]+>/g, ' ')
+    // Collapse whitespace
+    content = content.replace(/\s+/g, ' ').trim()
+    // Limit to ~10000 chars
+    if (content.length > 10000) content = content.slice(0, 10000) + '...'
+
+    return { title, description, content, favicon }
+  } catch {
+    return { title: '', description: '', content: '', favicon: null }
   }
 })
 

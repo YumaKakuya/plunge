@@ -22,7 +22,7 @@ contextBridge.exposeInMainWorld('plunge', {
     },
     highlights: {
       all: () => ipcRenderer.invoke('db:highlights:all'),
-      insert: (h: { clip_id: number; text: string; color?: string; note?: string }) =>
+      insert: (h: { clip_id: number; text: string; color?: string; note?: string; position?: string }) =>
         ipcRenderer.invoke('db:highlights:insert', h),
     },
     outbox: {
@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld('plunge', {
     fetchMeta: (url: string) => ipcRenderer.invoke('util:fetchMeta', url),
     readFile: (filePath: string) => ipcRenderer.invoke('util:readFile', filePath),
     parseDocx: (filePath: string) => ipcRenderer.invoke('util:parseDocx', filePath),
+    extractPage: (url: string) => ipcRenderer.invoke('util:extractPage', url),
   },
   dialog: {
     openFile: () => ipcRenderer.invoke('dialog:openFile'),

@@ -35,6 +35,13 @@ export interface Highlight {
   created_at: string
 }
 
+export interface HighlightPosition {
+  startOffset: number
+  endOffset: number
+  contextBefore: string  // ~30 chars before for fuzzy re-anchoring
+  contextAfter: string   // ~30 chars after
+}
+
 export interface OutboxEntry {
   id: number
   source_type: string
@@ -105,7 +112,7 @@ declare global {
         }
         highlights: {
           all: () => Promise<Highlight[]>
-          insert: (h: { clip_id: number; text: string; color?: string; note?: string }) => Promise<Record<string, unknown>>
+          insert: (h: { clip_id: number; text: string; color?: string; note?: string; position?: string }) => Promise<Record<string, unknown>>
         }
         outbox: {
           all: () => Promise<OutboxEntry[]>
@@ -118,6 +125,7 @@ declare global {
         fetchMeta: (url: string) => Promise<{ title: string; favicon: string | null }>
         readFile: (path: string) => Promise<string>
         parseDocx: (path: string) => Promise<string>
+        extractPage: (url: string) => Promise<{ title: string; description: string; content: string; favicon: string | null }>
       }
       dialog: {
         openFile: () => Promise<string | null>
