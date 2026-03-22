@@ -6,6 +6,7 @@ import type { Link, Tag, ToyView } from '@/shared/types'
 import { Button } from '@/renderer/components/ui/button'
 import { Card } from '@/renderer/components/ui/card'
 import { cn } from '@/renderer/lib/utils'
+import LinkFormModal from '@/renderer/components/LinkFormModal'
 
 function parseTags(link: Link): Tag[] {
   if (typeof link.tags === 'string') {
@@ -106,6 +107,7 @@ export default function Launcher() {
   const setToyView = useAppStore((s) => s.setToyView)
 
   const [now, setNow] = useState(new Date())
+  const [showLinkForm, setShowLinkForm] = useState(false)
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000)
@@ -200,6 +202,14 @@ export default function Launcher() {
           Links
         </span>
         <div className="flex-1 h-px bg-divider" />
+        <button
+          onClick={() => setShowLinkForm(true)}
+          className="w-6 h-6 flex items-center justify-center rounded-md text-text-muted
+                     hover:bg-surface-hover hover:text-text transition-colors duration-100 cursor-pointer text-[16px] leading-none"
+          title="Add link"
+        >
+          +
+        </button>
       </div>
 
       {/* Links */}
@@ -281,6 +291,8 @@ export default function Launcher() {
           })}
         </div>
       )}
+
+      <LinkFormModal open={showLinkForm} onClose={() => setShowLinkForm(false)} />
     </div>
   )
 }
