@@ -18,6 +18,14 @@ export default function App() {
   const setMode = useAppStore((s) => s.setMode)
   const setLaunchView = useAppStore((s) => s.setLaunchView)
   const setExpandedCard = useAppStore((s) => s.setExpandedCard)
+  const theme = useAppStore((s) => s.theme)
+  const toggleTheme = useAppStore((s) => s.toggleTheme)
+
+  // Initialize theme class on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('plunge-theme') || 'light'
+    document.documentElement.classList.toggle('dark', saved === 'dark')
+  }, [])
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -69,6 +77,14 @@ export default function App() {
             onClick={() => setMode(m.key)}
           />
         ))}
+        <button
+          onClick={toggleTheme}
+          className="ml-auto text-[13px] text-text-muted hover:text-gold cursor-pointer bg-transparent border-none transition-colors duration-100"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+        >
+          {theme === 'light' ? '☽' : '☀'}
+        </button>
       </div>
 
       {/* Content area */}

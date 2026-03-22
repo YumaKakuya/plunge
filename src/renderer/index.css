@@ -25,6 +25,38 @@
   --radius: 0.625rem;
 }
 
+.dark {
+  --background: #1A1814;
+  --foreground: #E8E0D0;
+  --card: #242018;
+  --card-foreground: #E8E0D0;
+  --popover: #242018;
+  --popover-foreground: #E8E0D0;
+  --primary: #D4A43A;
+  --primary-foreground: #1A1814;
+  --secondary: #2E2820;
+  --secondary-foreground: #E8E0D0;
+  --muted: #2E2820;
+  --muted-foreground: #8A7D70;
+  --accent: #2E2820;
+  --accent-foreground: #E8E0D0;
+  --destructive: oklch(0.55 0.2 27);
+  --border: #3A3228;
+  --input: #3A3228;
+  --ring: #D4A43A;
+  --color-base: #1A1814;
+  --color-text: #E8E0D0;
+  --color-text-secondary: #8A7D70;
+  --color-text-muted: #A89A8C;
+  --color-divider: #3A3228;
+  --color-gold: #D4A43A;
+  --color-gold-hover: #E0B044;
+  --color-shadow: rgba(13,11,8,0.3);
+  --color-surface: #242018;
+  --color-surface-hover: #2E2820;
+  --color-selected: #3A3228;
+}
+
 @theme {
   --color-base: #F5F1EB;
   --color-text: #2C2418;
