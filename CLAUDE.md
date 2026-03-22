@@ -17,6 +17,15 @@
 
 ---
 
+## Plunge. 実装から得たルール
+
+- **WSLg環境:** `frame: false` はLinuxで使わない。`process.platform === 'linux'` で `frame: true` に分岐
+- **`user-select: none` を使う場合、フォーム要素（input/textarea/select）に `select-text` を必ず追加する**
+- **better-sqlite3 は Electron 用に `npx electron-rebuild` が必要**
+- **シードデータはユーザーが明示的に要求しない限り入れない**
+
+---
+
 ## Tech Stack
 
 | Layer | Choice |
