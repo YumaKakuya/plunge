@@ -94,6 +94,11 @@ declare global {
       }
       util: {
         fetchMeta: (url: string) => Promise<{ title: string; favicon: string | null }>
+        readFile: (path: string) => Promise<string>
+        parseDocx: (path: string) => Promise<string>
+      }
+      dialog: {
+        openFile: () => Promise<string | null>
       }
       ai: {
         status: () => Promise<AiStatus>

@@ -28,6 +28,11 @@ contextBridge.exposeInMainWorld('plunge', {
   },
   util: {
     fetchMeta: (url: string) => ipcRenderer.invoke('util:fetchMeta', url),
+    readFile: (filePath: string) => ipcRenderer.invoke('util:readFile', filePath),
+    parseDocx: (filePath: string) => ipcRenderer.invoke('util:parseDocx', filePath),
+  },
+  dialog: {
+    openFile: () => ipcRenderer.invoke('dialog:openFile'),
   },
   ai: {
     status: () => ipcRenderer.invoke('ai:status'),
