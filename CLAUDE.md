@@ -13,7 +13,7 @@
 - **セッションのキリが良いところで Teacher を起動し lessons.md を生成・アナウンスしてからコミットする**
 - **After each lesson:** PROPOSED CLAUDE.md UPDATES を提案 → ユーザー承認後のみ修正
 - **NEVER modify:** `~/.config/plunge/config.json`（APIキーが入っている）
-- **Current state:** v0.2 foundation complete — Drizzle ORM, shadcn/ui, AI鞄持ち基盤
+- **Current state:** v0.3 — all Spec v0.2 Open Items implemented (Dark mode, Link registration, Clipper extraction, Highlighter positioning, Doc Reader docx, AXIS Outbox, Auto-update, AI department finalized)
 
 ---
 
@@ -23,6 +23,14 @@
 - **`user-select: none` を使う場合、フォーム要素（input/textarea/select）に `select-text` を必ず追加する**
 - **better-sqlite3 は Electron 用に `npx electron-rebuild` が必要**
 - **シードデータはユーザーが明示的に要求しない限り入れない**
+- **並列エージェント開発では、IPC hub（main.ts, preload.ts, types.ts）の衝突解消をTech Leadが計画に含める**
+  **Why:** 8エージェント並列で3回衝突。Electronの構造上、全機能がこの3ファイルに集中する
+- **JSオブジェクトリテラルの同名キー重複は後勝ち — マージ後にgrep確認必須**
+  **Why:** P2とP5のutil名前空間が重複定義され、fetchMetaがランタイムで消えるバグ。自動マージでは検出不可
+- **ワークツリー使用時は `.gitignore` に `.claude/` を事前追加**
+  **Why:** `git add -A` でワークツリーがサブモジュール警告と共にコミットされた
+- **Specの「Optional/Open Items」ラベルは発注者に再確認してから着手**
+  **Why:** Spec作成エージェントがOptionalとマークしても、発注者の意図はMust-haveだった
 
 ---
 
@@ -40,6 +48,8 @@
 | ORM | Drizzle ORM |
 | DB | SQLite (better-sqlite3) |
 | AI | Gemini 2.0 Flash Lite × 3部署 |
+| Doc Parser | mammoth.js (docx→MD) |
+| Auto-update | electron-updater + GitHub Releases |
 
 ---
 
@@ -78,4 +88,4 @@ src/shared/      ← Shared types (separate tsconfig boundary)
 
 ---
 
-*CLAUDE.md v1.0 — Plunge. Project*
+*CLAUDE.md v1.1 — Plunge. Project*
