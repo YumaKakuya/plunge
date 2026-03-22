@@ -35,6 +35,22 @@ export interface Highlight {
   created_at: string
 }
 
+export interface OutboxEntry {
+  id: number
+  source_type: string
+  source_id: number
+  payload: string
+  status: string
+  created_at: string
+  sent_at: string | null
+}
+
+export interface OutboxCount {
+  pending: number
+  sent: number
+  failed: number
+}
+
 export type AppMode = 'launch' | 'toys' | 'clock'
 export type LaunchView = 'project' | 'role' | 'tool'
 export type ToyView = 'clipper' | 'highlighter' | 'reader'
@@ -85,11 +101,17 @@ declare global {
         tags: { all: () => Promise<Tag[]> }
         clips: {
           all: () => Promise<Clip[]>
-          insert: (clip: { url?: string; title?: string; content: string; memo?: string; source_type?: string }) => Promise<{ lastInsertRowid: number }>
+          insert: (clip: { url?: string; title?: string; content: string; memo?: string; source_type?: string }) => Promise<Record<string, unknown>>
         }
         highlights: {
           all: () => Promise<Highlight[]>
-          insert: (h: { clip_id: number; text: string; color?: string; note?: string }) => Promise<{ lastInsertRowid: number }>
+          insert: (h: { clip_id: number; text: string; color?: string; note?: string }) => Promise<Record<string, unknown>>
+        }
+        outbox: {
+          all: () => Promise<OutboxEntry[]>
+          count: () => Promise<OutboxCount>
+          sendAll: () => Promise<{ sent: number; failed: number }>
+          retry: () => Promise<void>
         }
       }
       util: {

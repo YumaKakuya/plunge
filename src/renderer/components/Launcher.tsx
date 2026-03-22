@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/renderer/stores/appStore'
 import type { Link, Tag, ToyView } from '@/shared/types'
 import { Button } from '@/renderer/components/ui/button'
@@ -99,20 +99,67 @@ function NavCard({ icon, label, summary, onClick }: NavCardProps) {
   )
 }
 
+interface LinkIconProps {
+  icon?: string | null
+}
+
+function LinkIcon({ icon }: LinkIconProps) {
+  const [failed, setFailed] = useState(false)
+
+  if (icon && icon.startsWith('http') && !failed) {
+    return (
+      <img
+        src={icon}
+        className="w-5 h-5 rounded object-cover"
+        onError={() => setFailed(true)}
+        alt=""
+      />
+    )
+  }
+
+  if (icon && !icon.startsWith('http')) {
+    return <span className="text-xl leading-none">{icon}</span>
+  }
+
+  return <span className="text-xl leading-none">🔗</span>
+}
+
+interface ContextMenuState {
+  linkId: number
+  x: number
+  y: number
+}
+
 export default function Launcher() {
   const launchView = useAppStore((s) => s.launchView)
   const expandedCard = useAppStore((s) => s.expandedCard)
   const toggleCard = useAppStore((s) => s.toggleCard)
   const setMode = useAppStore((s) => s.setMode)
   const setToyView = useAppStore((s) => s.setToyView)
+  const queryClient = useQueryClient()
 
   const [now, setNow] = useState(new Date())
   const [showLinkForm, setShowLinkForm] = useState(false)
+  const [groupFilter, setGroupFilter] = useState('')
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+  const contextMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(id)
   }, [])
+
+  // Close context menu on outside click
+  useEffect(() => {
+    if (!contextMenu) return
+    const handler = (e: MouseEvent) => {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
+        setContextMenu(null)
+      }
+    }
+    window.addEventListener('mousedown', handler)
+    return () => window.removeEventListener('mousedown', handler)
+  }, [contextMenu])
 
   const { data: links = [] } = useQuery({
     queryKey: ['links'],
@@ -129,8 +176,30 @@ export default function Launcher() {
     queryFn: () => window.plunge.db.highlights.all(),
   })
 
+  const { data: outboxCount } = useQuery({
+    queryKey: ['outbox-count'],
+    queryFn: () => window.plunge.db.outbox.count(),
+    refetchInterval: 60_000,
+  })
+
+  const [sending, setSending] = useState(false)
+  const handleSendNow = async () => {
+    setSending(true)
+    try {
+      await window.plunge.db.outbox.sendAll()
+      queryClient.invalidateQueries({ queryKey: ['outbox-count'] })
+    } finally {
+      setSending(false)
+    }
+  }
+
   const grouped = groupByAxis(links, launchView)
   const groupKeys = Array.from(grouped.keys())
+
+  // Filter groups by search input
+  const filteredGroupKeys = groupFilter.trim()
+    ? groupKeys.filter((k) => k.toLowerCase().includes(groupFilter.toLowerCase()))
+    : groupKeys
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -153,6 +222,18 @@ export default function Launcher() {
     setMode('toys')
     setToyView(view)
   }
+
+  const handleContextMenu = (e: React.MouseEvent, linkId: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({ linkId, x: e.clientX, y: e.clientY })
+  }
+
+  const closeContextMenu = () => setContextMenu(null)
+
+  const contextMenuLink = contextMenu
+    ? links.find((l) => l.id === contextMenu.linkId) ?? null
+    : null
 
   return (
     <div className="flex flex-col gap-4 p-4 overflow-y-auto h-full">
@@ -196,6 +277,33 @@ export default function Launcher() {
         />
       </motion.div>
 
+      {/* AXIS Outbox Status */}
+      {outboxCount && (outboxCount.pending > 0 || outboxCount.failed > 0) && (
+        <div className="flex items-center gap-2 px-1">
+          <span className="text-[12px] text-text-muted">
+            AXIS:
+            {outboxCount.pending > 0 && (
+              <span className="ml-1 text-gold">{outboxCount.pending} pending</span>
+            )}
+            {outboxCount.failed > 0 && (
+              <span className="ml-1 text-destructive">{outboxCount.failed} failed</span>
+            )}
+          </span>
+          <button
+            onClick={handleSendNow}
+            disabled={sending || outboxCount.pending === 0}
+            className={cn(
+              'text-[11px] px-2 py-0.5 rounded-md',
+              'bg-surface border border-divider',
+              'hover:bg-surface-hover transition-colors duration-100',
+              'cursor-pointer disabled:opacity-40 disabled:cursor-default'
+            )}
+          >
+            {sending ? 'Sending...' : 'Send now'}
+          </button>
+        </div>
+      )}
+
       {/* Links Section Divider */}
       <div className="flex items-center gap-2">
         <span className="text-[13px] font-medium text-text-muted uppercase tracking-wider">
@@ -212,6 +320,28 @@ export default function Launcher() {
         </button>
       </div>
 
+      {/* Search / Filter input */}
+      {links.length > 0 && (
+        <div className="relative">
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted text-[13px] pointer-events-none select-none">
+            🔍
+          </span>
+          <input
+            type="text"
+            value={groupFilter}
+            onChange={(e) => setGroupFilter(e.target.value)}
+            placeholder="Filter groups…"
+            className={cn(
+              'w-full pl-8 pr-3 py-1.5 text-[13px] rounded-lg',
+              'bg-surface border border-divider',
+              'text-text placeholder:text-text-muted',
+              'focus:outline-none focus:ring-1 focus:ring-gold/50',
+              'transition-colors duration-100'
+            )}
+          />
+        </div>
+      )}
+
       {/* Links */}
       {links.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 gap-2">
@@ -227,7 +357,7 @@ export default function Launcher() {
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {groupKeys.map((key) => {
+          {filteredGroupKeys.map((key) => {
             const isExpanded = expandedCard === key
             const items = grouped.get(key) ?? []
 
@@ -253,7 +383,7 @@ export default function Launcher() {
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.15, ease: 'easeInOut' }}
+                        transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
                         className="overflow-hidden"
                       >
                         <motion.div
@@ -269,13 +399,12 @@ export default function Launcher() {
                               onClick={() =>
                                 window.plunge.openExternal(link.url)
                               }
+                              onContextMenu={(e) => handleContextMenu(e, link.id)}
                               className="flex flex-col items-center gap-1.5 p-2 rounded-lg
                                          hover:bg-surface-hover transition-colors duration-100 cursor-pointer"
                               title={link.url}
                             >
-                              <span className="text-xl leading-none">
-                                {link.icon ?? '\uD83D\uDD17'}
-                              </span>
+                              <LinkIcon icon={link.icon} />
                               <span className="text-[11px] text-text-secondary truncate w-full text-center">
                                 {link.name}
                               </span>
@@ -289,6 +418,54 @@ export default function Launcher() {
               </motion.div>
             )
           })}
+
+          {filteredGroupKeys.length === 0 && groupFilter.trim() && (
+            <p className="text-[13px] text-text-muted text-center py-4">
+              No groups match "{groupFilter}"
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Right-click context menu */}
+      {contextMenu && contextMenuLink && (
+        <div
+          ref={contextMenuRef}
+          className={cn(
+            'fixed z-50 min-w-[140px] rounded-lg overflow-hidden',
+            'bg-surface border border-divider shadow-lg'
+          )}
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+        >
+          <button
+            onClick={() => {
+              window.plunge.openExternal(contextMenuLink.url)
+              closeContextMenu()
+            }}
+            className="w-full text-left px-3 py-2 text-[13px] text-text hover:bg-surface-hover transition-colors duration-75 cursor-pointer"
+          >
+            Open
+          </button>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(contextMenuLink.url)
+              closeContextMenu()
+            }}
+            className="w-full text-left px-3 py-2 text-[13px] text-text hover:bg-surface-hover transition-colors duration-75 cursor-pointer"
+          >
+            Copy URL
+          </button>
+          <div className="h-px bg-divider mx-2" />
+          <button
+            onClick={async () => {
+              await window.plunge.db.links.delete(contextMenuLink.id)
+              queryClient.invalidateQueries({ queryKey: ['links'] })
+              closeContextMenu()
+            }}
+            className="w-full text-left px-3 py-2 text-[13px] text-destructive hover:bg-surface-hover transition-colors duration-75 cursor-pointer"
+          >
+            Delete
+          </button>
         </div>
       )}
 

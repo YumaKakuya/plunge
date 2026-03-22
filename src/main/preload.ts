@@ -25,6 +25,12 @@ contextBridge.exposeInMainWorld('plunge', {
       insert: (h: { clip_id: number; text: string; color?: string; note?: string }) =>
         ipcRenderer.invoke('db:highlights:insert', h),
     },
+    outbox: {
+      all: () => ipcRenderer.invoke('db:outbox:all'),
+      count: () => ipcRenderer.invoke('db:outbox:count'),
+      sendAll: () => ipcRenderer.invoke('db:outbox:sendAll'),
+      retry: () => ipcRenderer.invoke('db:outbox:retry'),
+    },
   },
   util: {
     fetchMeta: (url: string) => ipcRenderer.invoke('util:fetchMeta', url),

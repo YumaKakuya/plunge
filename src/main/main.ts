@@ -92,6 +92,29 @@ app.whenReady().then(() => {
       mainWindow.focus()
     }
   })
+
+  // AXIS outbox: periodic batch every 15 minutes
+  setInterval(() => {
+    try {
+      const db = getDrizzle()
+      const pending = db.select().from(schema.axisOutbox)
+        .where(eq(schema.axisOutbox.status, 'pending')).all()
+
+      for (const entry of pending) {
+        // STUB: In production, this would POST to AXIS engine via local IPC
+        db.update(schema.axisOutbox)
+          .set({ status: 'sent', sentAt: new Date().toISOString() })
+          .where(eq(schema.axisOutbox.id, entry.id))
+          .run()
+      }
+
+      if (pending.length > 0) {
+        console.log(`[AXIS Outbox] Batch sent ${pending.length} entries (stub)`)
+      }
+    } catch (err) {
+      console.log('[AXIS Outbox] Batch error:', err)
+    }
+  }, 15 * 60 * 1000)
 })
 
 app.on('window-all-closed', () => {
@@ -179,13 +202,27 @@ ipcMain.handle('db:clips:all', () => {
 
 ipcMain.handle('db:clips:insert', (_e, clip: { url?: string; title?: string; content: string; memo?: string; source_type?: string }) => {
   const db = getDrizzle()
-  return db.insert(schema.clips).values({
+  const clipResult = db.insert(schema.clips).values({
     url: clip.url ?? null,
     title: clip.title ?? null,
     content: clip.content,
     memo: clip.memo ?? null,
     sourceType: clip.source_type ?? 'manual',
+  }).returning().get()
+  // Auto-enqueue to AXIS outbox
+  db.insert(schema.axisOutbox).values({
+    sourceType: 'clip',
+    sourceId: clipResult.id,
+    payload: JSON.stringify({
+      origin: 'plunge',
+      origin_version: '0.3',
+      item_type: 'clip',
+      created_at: new Date().toISOString(),
+      content: { url: clip.url, title: clip.title, body: clip.content, memo: clip.memo },
+      tags: [],
+    }),
   }).run()
+  return clipResult
 })
 
 ipcMain.handle('db:highlights:all', () => {
@@ -205,12 +242,26 @@ ipcMain.handle('db:highlights:all', () => {
 
 ipcMain.handle('db:highlights:insert', (_e, h: { clip_id: number; text: string; color?: string; note?: string }) => {
   const db = getDrizzle()
-  return db.insert(schema.highlights).values({
+  const highlightResult = db.insert(schema.highlights).values({
     clipId: h.clip_id,
     text: h.text,
     color: h.color ?? 'yellow',
     note: h.note ?? null,
+  }).returning().get()
+  // Auto-enqueue to AXIS outbox
+  db.insert(schema.axisOutbox).values({
+    sourceType: 'highlight',
+    sourceId: highlightResult.id,
+    payload: JSON.stringify({
+      origin: 'plunge',
+      origin_version: '0.3',
+      item_type: 'highlight',
+      created_at: new Date().toISOString(),
+      content: { text: h.text, note: h.note, color: h.color },
+      tags: [],
+    }),
   }).run()
+  return highlightResult
 })
 
 ipcMain.handle('db:links:insert', (_e, data: { name: string; url: string; icon?: string; tagIds?: number[] }) => {
@@ -233,6 +284,66 @@ ipcMain.handle('db:links:insert', (_e, data: { name: string; url: string; icon?:
 ipcMain.handle('db:links:delete', (_e, linkId: number) => {
   const db = getDrizzle()
   return db.delete(schema.links).where(eq(schema.links.id, linkId)).run()
+})
+
+// ─── AXIS Outbox Handlers ───
+
+ipcMain.handle('db:outbox:all', () => {
+  const db = getDrizzle()
+  const rows = db.select().from(schema.axisOutbox).orderBy(desc(schema.axisOutbox.createdAt)).all()
+  return rows.map((row) => ({
+    id: row.id,
+    source_type: row.sourceType,
+    source_id: row.sourceId,
+    payload: row.payload,
+    status: row.status,
+    created_at: row.createdAt,
+    sent_at: row.sentAt,
+  }))
+})
+
+ipcMain.handle('db:outbox:count', () => {
+  const db = getDrizzle()
+  const all = db.select().from(schema.axisOutbox).all()
+  let pending = 0, sent = 0, failed = 0
+  for (const row of all) {
+    if (row.status === 'pending') pending++
+    else if (row.status === 'sent') sent++
+    else if (row.status === 'failed') failed++
+  }
+  return { pending, sent, failed }
+})
+
+ipcMain.handle('db:outbox:sendAll', () => {
+  const db = getDrizzle()
+  const pending = db.select().from(schema.axisOutbox)
+    .where(eq(schema.axisOutbox.status, 'pending')).all()
+  let sent = 0, failed = 0
+  for (const entry of pending) {
+    try {
+      // STUB: In production, this would POST to AXIS engine via local IPC
+      db.update(schema.axisOutbox)
+        .set({ status: 'sent', sentAt: new Date().toISOString() })
+        .where(eq(schema.axisOutbox.id, entry.id))
+        .run()
+      sent++
+    } catch {
+      db.update(schema.axisOutbox)
+        .set({ status: 'failed' })
+        .where(eq(schema.axisOutbox.id, entry.id))
+        .run()
+      failed++
+    }
+  }
+  return { sent, failed }
+})
+
+ipcMain.handle('db:outbox:retry', () => {
+  const db = getDrizzle()
+  db.update(schema.axisOutbox)
+    .set({ status: 'pending' })
+    .where(eq(schema.axisOutbox.status, 'failed'))
+    .run()
 })
 
 ipcMain.handle('util:fetchMeta', async (_e, url: string) => {
