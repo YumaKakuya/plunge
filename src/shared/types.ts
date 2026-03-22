@@ -96,6 +96,7 @@ declare global {
         fetchMeta: (url: string) => Promise<{ title: string; favicon: string | null }>
         readFile: (path: string) => Promise<string>
         parseDocx: (path: string) => Promise<string>
+        extractPage: (url: string) => Promise<{ title: string; description: string; content: string; favicon: string | null }>
       }
       dialog: {
         openFile: () => Promise<string | null>

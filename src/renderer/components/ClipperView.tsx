@@ -15,9 +15,23 @@ export default function ClipperView() {
   const [content, setContent] = useState('')
   const [memo, setMemo] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [fetching, setFetching] = useState(false)
 
   const { ask, isLoading: aiLoading, error: aiError } = useAi()
   const { data: aiStatus } = useAiStatus()
+
+  const handleFetch = async () => {
+    if (!url.trim()) return
+    setFetching(true)
+    try {
+      const result = await window.plunge.util.extractPage(url.trim())
+      if (result.title) setTitle(result.title)
+      if (result.content) setContent(result.content)
+      if (result.description) setMemo(result.description)
+    } finally {
+      setFetching(false)
+    }
+  }
 
   const handleAiExtract = async () => {
     if (!url.trim()) return
@@ -68,21 +82,33 @@ export default function ClipperView() {
     <div className="p-4 space-y-4">
       {/* Clip form */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="flex gap-4">
-          <div className="grid grid-cols-2 gap-4 flex-1">
-            <Input
-              type="url"
-              placeholder="URL (optional)"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-            />
-            <Input
-              type="text"
-              placeholder="Title (optional)"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
+        <div className="flex gap-2">
+          <Input
+            type="url"
+            placeholder="URL (optional)"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            className="flex-1 select-text"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!url.trim() || fetching}
+            onClick={handleFetch}
+            className="cursor-pointer shrink-0"
+          >
+            {fetching ? 'Fetching...' : 'Fetch'}
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          <Input
+            type="text"
+            placeholder="Title (optional)"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="flex-1 select-text"
+          />
           {aiStatus?.configured && (
             <Button
               type="button"
@@ -104,12 +130,14 @@ export default function ClipperView() {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           rows={4}
+          className="select-text"
         />
         <Textarea
           placeholder="Memo (optional)"
           value={memo}
           onChange={(e) => setMemo(e.target.value)}
           rows={2}
+          className="select-text"
         />
         <Button
           type="submit"

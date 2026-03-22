@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('plunge', {
     fetchMeta: (url: string) => ipcRenderer.invoke('util:fetchMeta', url),
     readFile: (filePath: string) => ipcRenderer.invoke('util:readFile', filePath),
     parseDocx: (filePath: string) => ipcRenderer.invoke('util:parseDocx', filePath),
+    extractPage: (url: string) => ipcRenderer.invoke('util:extractPage', url),
   },
   dialog: {
     openFile: () => ipcRenderer.invoke('dialog:openFile'),
