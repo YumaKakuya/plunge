@@ -35,6 +35,13 @@ export interface Highlight {
   created_at: string
 }
 
+export interface HighlightPosition {
+  startOffset: number
+  endOffset: number
+  contextBefore: string  // ~30 chars before for fuzzy re-anchoring
+  contextAfter: string   // ~30 chars after
+}
+
 export type AppMode = 'launch' | 'toys' | 'clock'
 export type LaunchView = 'project' | 'role' | 'tool'
 export type ToyView = 'clipper' | 'highlighter' | 'reader'
@@ -89,7 +96,7 @@ declare global {
         }
         highlights: {
           all: () => Promise<Highlight[]>
-          insert: (h: { clip_id: number; text: string; color?: string; note?: string }) => Promise<{ lastInsertRowid: number }>
+          insert: (h: { clip_id: number; text: string; color?: string; note?: string; position?: string }) => Promise<{ lastInsertRowid: number }>
         }
       }
       util: {

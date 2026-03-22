@@ -203,13 +203,14 @@ ipcMain.handle('db:highlights:all', () => {
   }))
 })
 
-ipcMain.handle('db:highlights:insert', (_e, h: { clip_id: number; text: string; color?: string; note?: string }) => {
+ipcMain.handle('db:highlights:insert', (_e, h: { clip_id: number; text: string; color?: string; note?: string; position?: string }) => {
   const db = getDrizzle()
   return db.insert(schema.highlights).values({
     clipId: h.clip_id,
     text: h.text,
     color: h.color ?? 'yellow',
     note: h.note ?? null,
+    position: h.position ?? null,
   }).run()
 })
 

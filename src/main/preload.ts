@@ -22,7 +22,7 @@ contextBridge.exposeInMainWorld('plunge', {
     },
     highlights: {
       all: () => ipcRenderer.invoke('db:highlights:all'),
-      insert: (h: { clip_id: number; text: string; color?: string; note?: string }) =>
+      insert: (h: { clip_id: number; text: string; color?: string; note?: string; position?: string }) =>
         ipcRenderer.invoke('db:highlights:insert', h),
     },
   },

@@ -7,6 +7,7 @@ import { Textarea } from '@/renderer/components/ui/textarea'
 import { Button } from '@/renderer/components/ui/button'
 import { Card, CardContent } from '@/renderer/components/ui/card'
 import { useAi, useAiStatus } from '@/renderer/hooks/useAi'
+import ClipDetailView from './ClipDetailView'
 
 export default function ClipperView() {
   const queryClient = useQueryClient()
@@ -16,6 +17,7 @@ export default function ClipperView() {
   const [memo, setMemo] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [fetching, setFetching] = useState(false)
+  const [selectedClip, setSelectedClip] = useState<Clip | null>(null)
 
   const { ask, isLoading: aiLoading, error: aiError } = useAi()
   const { data: aiStatus } = useAiStatus()
@@ -76,6 +78,10 @@ export default function ClipperView() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  if (selectedClip) {
+    return <ClipDetailView clip={selectedClip} onClose={() => setSelectedClip(null)} />
   }
 
   return (
@@ -176,7 +182,10 @@ export default function ClipperView() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.03 }}
             >
-              <Card className="bg-surface border-divider">
+              <Card
+                className="bg-surface border-divider cursor-pointer hover:border-text-muted transition-colors"
+                onClick={() => setSelectedClip(clip)}
+              >
                 <CardContent className="p-3">
                   <div className="flex items-start justify-between gap-2">
                     <h4 className="text-sm font-medium text-text truncate">
